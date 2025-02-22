@@ -1,0 +1,8 @@
+# Virtual environment
+markov_switch/
+
+# Python
+__pycache__/
+
+# Storage
+.DS_Store
