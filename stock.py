@@ -23,7 +23,7 @@ class Stock:
     def load_data(self):
         """
         Loads the stock data by calling function defined in loader.py
-        Wraps the data in a pandas DataFrame and adds the percentage log returns and the ATR.
+        Wraps the data in a pandas DataFrame and adds the percentage log returns.
         """
         # load data
         data = l.load_data(self.ticker)
