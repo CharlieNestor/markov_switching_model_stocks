@@ -221,10 +221,10 @@ def add_pct_log_returns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def process_data(df: pd.DataFrame, var_lag: int = 20) -> pd.DataFrame:
+def process_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     Process the data to calculate different metrics: 
-    range, body, lagged returns, squared returns, lagged squared returns, and realized variance
+    range, body, lagged returns, squared returns, lagged squared returns
     :param df: dataframe with historical data
     :return: dataframe with processed data
     """
@@ -239,17 +239,9 @@ def process_data(df: pd.DataFrame, var_lag: int = 20) -> pd.DataFrame:
     result['Squared_Returns'] = result['Log_Returns']**2
     result['Lagged_Squared_Returns'] = result['Squared_Returns'].shift(1)
 
-    result['Roll_Returns'] = result['Log_Returns'].rolling(window=var_lag).mean()
-    result['Demeaned_Returns'] = result['Log_Returns'] - result['Roll_Returns']
-    result['Lagged_Demeaned_Returns'] = result['Demeaned_Returns'].shift(1)
-
     # Range and body percentage
     result['Lagged_Range_perc'] = result['Range_perc'].shift(1)
     result['Lagged_Body_perc'] = result['Body_perc'].shift(1)
-
-    # Rolling Variance
-    result['Rolling_Variance'] = result['Log_Returns'].rolling(window=var_lag).var()
-    result['Lagged_Rolling_Variance'] = result['Rolling_Variance'].shift(1)
 
     return result
 
@@ -314,6 +306,8 @@ def calculate_ATR(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
     for i in range(period+2, len(new_df)):
         #new_df.iloc[i].at['ATR'] = (new_df.iloc[i-1].at['ATR'] * (period - 1) + new_df.iloc[i].at['TR']) / period
         new_df.loc[new_df.index[i], 'ATR'] = (new_df.iloc[i-1]['ATR'] * (period - 1) + new_df.iloc[i]['TR']) / period
+
+    new_df['Lagged_ATR'] = new_df['ATR'].shift(1)
 
     # Drop the intermediate 'Prev_Close' column
     df.drop(columns=['Prev_Close'], inplace=True)
