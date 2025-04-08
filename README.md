@@ -1,24 +1,24 @@
-# Bayesian Markov Switching Model for Financial Time Series
+# Markov Switching Model for Financial Time Series
 
-This project implements a Bayesian Markov Switching Model for analyzing financial time series data, with a particular focus on capturing the complex dynamics of stock returns. The model employs a full Bayesian approach to identify and characterize different market regimes, providing a robust framework for understanding market behavior.
+This project implements a Bayesian Markov Switching Model for analyzing financial time series data, with a particular focus on capturing the peculiar dynamics of stock returns. The model employs a full Bayesian approach to identify and characterize different market regimes, providing a robust framework for understanding market behavior.
 
 ## Project Overview
 
-Financial markets exhibit several key characteristics that challenge traditional modeling approaches:
+Financial time series analysis presents several modeling challenges:
 
 1. **Regime-Switching Behavior**: Markets transition between distinct states (e.g., bull markets, bear markets)
 2. **Volatility Dynamics**: Returns generally show persistent volatility patterns and clustering
 3. **Non-Normal Features**: Returns often display fat tails and excess kurtosis
 4. **Mean Reversion**: Returns exhibit varying degrees of mean reversion across regimes
 
-This project addresses these challenges through a Bayesian Hidden Markov Model that:
+The project addresses these challenges through a Markov Switching Model that:
 
 - Uses latent state variables to identify market regimes
 - Implements regime-specific dynamics for returns and volatility
-- Incorporates prior knowledge through carefully chosen Bayesian priors
-- Provides full posterior distributions for all model parameters
+- Incorporates prior knowledge (or lack of) via Bayesian priors
+- Provides full posterior distributions for all model parameters (thanks to the Bayesian approach)
 
-## Key Features
+## Analysis and Implementation
 
 ### 1. Exploratory Data Analysis
 
@@ -31,7 +31,7 @@ The EDA component provides a detailed statistical analysis for understanding fin
 
 ### 2. Bayesian Markov Switching Model
 
-Building on the insights from the EDA, the Markov Switching Model implements a Bayesian approach:
+Building on the insights from the EDA, the Markov Switching Model is implemented via a Bayesian approach:
 
 - **Hidden Markov Chain**: Latent state variables following a Markov process
 - **Regime-Specific Parameters**:

@@ -144,3 +144,49 @@ def plot_trace(trace: az.InferenceData,
     
     plt.tight_layout()
     return fig
+
+
+def perform_diagnostic_checks(trace: az.InferenceData, 
+                            verbose: bool = False,
+                            exclude_vars: list = None) -> pd.DataFrame:
+    """
+    Performs diagnostic checks and generates summary statistics for all parameters.
+    : param trace: ArviZ InferenceData object containing the MCMC trace
+    : param verbose: boolean, if True, print the list of parameters
+    : param exclude_vars: list of variables to ignore from the analysis
+    : return: pandas DataFrame with summary statistics for all parameters
+    """
+    parameters = []
+    n_params = 0
+    exclude_vars = exclude_vars or []
+        
+    # Get all parameter names from the trace
+    for var in trace.posterior.variables:
+        if (var not in ['chain', 'draw'] and \
+           'state' not in var and \
+           'initial' not in var and \
+           'probs' not in var and \
+           var not in exclude_vars):
+            if len(trace.posterior[var].shape) == 2:
+                n_params += 1
+                parameters.append(var)
+            elif len(trace.posterior[var].shape) > 2:
+                n_params += trace.posterior[var].shape[-1]
+                parameters.append(var)
+    if verbose:
+        print(f"Number of parameters: {n_params}")
+        print(f"Parameters: {parameters}")
+
+    # Generate summary statistics
+    summary = az.summary(trace, 
+                        var_names=parameters,
+                        hdi_prob=0.95,
+                        round_to=6,
+                        stat_funcs={'mode': lambda x: float(pd.Series(x).mode()[0]),
+                                  'median': lambda x: float(pd.Series(x).median())})
+    
+    print("\nPosterior Distribution Statistics:")
+    print("="*80)
+    print(summary)
+    
+    return summary
