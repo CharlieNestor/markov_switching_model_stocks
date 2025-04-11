@@ -13,6 +13,7 @@ from statsmodels.tsa.stattools import acf, pacf
 
 # DIAGNOSTIC CHECKS
 
+
 def plot_trace(trace: az.InferenceData, 
             var_names: list[str], 
             burn_in: bool = False, 
@@ -190,3 +191,86 @@ def perform_diagnostic_checks(trace: az.InferenceData,
     print(summary)
     
     return summary
+
+
+# INFORMATION CRITERIA
+
+
+def calculate_information_criteria(trace: az.InferenceData, 
+                                n_samples: int, 
+                                verbose: bool = False,
+                                exclude_vars: list = None) -> dict:
+    """
+    Calculate AIC and BIC for the model
+    :param trace: ArviZ InferenceData object
+    :param n_samples: number of observations
+    :return: dictionary with AIC, BIC, and n_params
+    """
+    # Get number of parameters (excluding states)
+    exclude_vars = exclude_vars or []
+    params_list = []
+    n_params = 0
+    for var in trace.posterior.variables:
+        if var != 'chain' and \
+            var != 'draw' and \
+            'state' not in var and \
+            'initial' not in var and \
+            var not in exclude_vars:
+            if len(trace.posterior[var].shape) == 2:
+                n_params +=1
+                params_list.append(var)
+            else:
+                if len(trace.posterior[var].shape) >2:
+                    n_params += trace.posterior[var].shape[-1]
+                    params_list.append(var)
+    if verbose:
+        print(params_list)
+    
+    # Get log likelihood values
+    log_lik = trace.log_likelihood.returns_obs      # shape: (chains, draws, time points)
+
+    # Calculate mean log likelihood for each time point
+    mean_log_lik = log_lik.mean(dim=("chain", "draw")).sum()
+    
+    # Calculate AIC and BIC
+    aic = -2 * mean_log_lik + 2 * n_params
+    bic = -2 * mean_log_lik + np.log(n_samples) * n_params
+
+    # CALCULATE DIC
+    # First sum over time points to get deviance per draw
+    # This gives us the total deviance for each MCMC sample
+    deviance_samples = -2 * log_lik.sum(dim="returns_obs_dim_0")
+    # Then take the mean across MCMC samples
+    mean_deviance = deviance_samples.mean(dim=("chain", "draw"))
+    # Approximate deviance at the posterior mean using the mean log likelihood
+    deviance_at_means = -2* mean_log_lik
+    # Calculate effective number of parameters (pD)
+    # pD = 2 * (log p(y|θ_mean) - mean(log p(y|θ)))
+    p_d = 0.5 * (mean_deviance - deviance_at_means)
+    
+    # DIC = deviance_mean + 2 * pD
+    dic = deviance_at_means + 2 * p_d
+
+    # Calculate WAIC
+    # First, compute point-wise log likelihood
+    # This is the log-likelihood for each observation, chain, and draw
+    point_log_lik = log_lik
+    
+    # Compute mean log predictive density (lppd)
+    # exp(log_lik) gives us the likelihood, then we take the mean across chains and draws
+    lppd = np.log(np.exp(point_log_lik).mean(dim=("chain", "draw"))).sum()
+    
+    # Compute effective number of parameters (pWAIC)
+    # pWAIC is the sum of the variances of the log-likelihood for each observation
+    var_log_lik = point_log_lik.var(dim=("chain", "draw"))
+    p_waic = var_log_lik.sum()
+    
+    waic = -2 * (lppd - p_waic)
+    
+    return {
+        'n_params': n_params,
+        'AIC': round(float(aic), 3),
+        'BIC': round(float(bic), 3),
+        'DIC': round(float(dic), 3),
+        'WAIC': round(float(waic), 3)
+    }
