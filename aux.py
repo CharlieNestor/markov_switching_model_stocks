@@ -201,10 +201,11 @@ def calculate_information_criteria(trace: az.InferenceData,
                                 verbose: bool = False,
                                 exclude_vars: list = None) -> dict:
     """
-    Calculate AIC and BIC for the model
+    Calculate AIC, BIC, DIC, and WAIC for the model
+
     :param trace: ArviZ InferenceData object
     :param n_samples: number of observations
-    :return: dictionary with AIC, BIC, and n_params
+    :return: dictionary with AIC, BIC, DIC, and WAIC and number of parameters
     """
     # Get number of parameters (excluding states)
     exclude_vars = exclude_vars or []
@@ -274,3 +275,155 @@ def calculate_information_criteria(trace: az.InferenceData,
         'DIC': round(float(dic), 3),
         'WAIC': round(float(waic), 3)
     }
+
+
+# REGIME PERSISTENCE
+
+def calculate_aggregate_metrics(values):
+    """
+    Calculate distribution statistics across chains with uncertainty quantification.
+
+    :param values: List of values from different chains 
+    :return: Dictionary of distribution statistics
+    """
+    values = np.array(values)
+    return {
+        'mean': round(np.mean(values), 6),
+        'median': round(np.median(values), 6),
+        'std': round(np.std(values), 6),
+        'percentile_95': (round(float(np.percentile(values, 2.5)), 6), 
+                            round(float(np.percentile(values, 97.5)), 6)),
+    }
+
+
+def analyze_regime_persistence(trace: az.InferenceData, n_regimes: int = 3) -> dict:
+    """
+    Analyze regime persistence for either 2-regime or 3-regime models
+    :param trace: ArviZ InferenceData object containing the MCMC trace
+    :param n_regimes: int, optional (default=3)
+        Number of regimes (2 or 3)
+    :return: dict containing persistence metrics with uncertainty quantification
+    """
+    if n_regimes not in [2, 3]:
+        raise ValueError("Only 2 or 3 regimes are supported")
+
+    # Extract states
+    states = trace.posterior['states'].values  # Shape: (chains, draws, time)
+    
+    # Extract transition probabilities based on regime count
+    if n_regimes == 2:
+        # For 2 regimes: scalar p00, p11
+        p00_samples = trace.posterior['p00'].values
+        p11_samples = trace.posterior['p11'].values
+        transition_probs = {'p00': p00_samples, 'p11': p11_samples}
+    else:
+        # For 3 regimes: vector p0, p1, p2
+        p0_samples = trace.posterior['p0'].values
+        p1_samples = trace.posterior['p1'].values
+        p2_samples = trace.posterior['p2'].values
+        transition_probs = {
+            'p00': p0_samples[..., 0],
+            'p11': p1_samples[..., 1],
+            'p22': p2_samples[..., 2]
+        }
+    
+    chain_metrics = []
+    
+    for chain in range(states.shape[0]):    # for each chain
+        chain_result = {
+            'expected_durations': [],
+            'empirical_durations': [],
+            'transition_probs': []
+        }
+        
+        for draw in range(states.shape[1]):    # for each draw
+            draw_states = states[chain, draw]
+            
+            # Get transition probabilities for this draw
+            if n_regimes == 2:
+                p00 = p00_samples[chain, draw]
+                p11 = p11_samples[chain, draw]
+                probs = (p00, p11)
+            else:
+                p00 = p0_samples[chain, draw, 0]
+                p11 = p1_samples[chain, draw, 1]
+                p22 = p2_samples[chain, draw, 2]
+                probs = (p00, p11, p22)
+            
+            # Calculate expected durations (from transition probabilities)
+            expected_durations = tuple(1 / (1 - p) for p in probs)  # Formula for expected duration
+            chain_result['expected_durations'].append(expected_durations)
+            chain_result['transition_probs'].append(probs)
+            
+            # Calculate empirical durations (from states)
+            regime_changes = np.diff(draw_states)  # Difference between consecutive states
+            change_points = np.where(regime_changes != 0)[0] + 1  # Index of regime changes
+            regime_durations = np.split(draw_states, change_points)  # Split states into regimes
+            
+            # Calculate durations for each regime (from states)
+            empirical_durations = []
+            for regime in range(n_regimes):
+                # get the consecutive durations of the regime (how many consecutive states are in the regime)
+                durations = [len(r) for r in regime_durations if r[0] == regime]
+                # calculate the mean duration
+                mean_duration = np.mean(durations) if durations else np.nan
+                empirical_durations.append(mean_duration)
+            
+            chain_result['empirical_durations'].append(tuple(empirical_durations))
+        
+        chain_metrics.append(chain_result)
+    
+    # Aggregate results
+    results = {}
+    
+    # Process each regime
+    for regime in range(n_regimes):
+        regime_key = f'regime_{regime}'
+        p_key = f'p{regime}{regime}'
+
+        # For empirical durations: combine all chains and draws
+        empirical_values = [m['empirical_durations'][i][regime] 
+                          for m in chain_metrics 
+                          for i in range(len(m['empirical_durations']))]
+        
+        # For expected durations: use transition probabilities
+        p_samples = transition_probs[p_key].flatten()
+        expected_values = 1/(1-p_samples)
+        
+        results[regime_key] = {
+            'empirical': calculate_aggregate_metrics(empirical_values),
+            'expected': calculate_aggregate_metrics(expected_values),
+            'transition_probs': calculate_aggregate_metrics(p_samples)
+        }
+    
+    return results
+
+
+def calculate_regime_classification(states_posterior, n_regimes: int = 3):
+    """
+    Calculate regime classification measure (RCM) for 3 regimes with uncertainty across chains.
+    A higher RCM (closer to 100) indicates better regime classification.
+    """
+    chain_rcms = []
+    
+    for chain in range(states_posterior.shape[0]):
+        # Step 1: Calculate regime probabilities for each time point
+        state_probs = np.zeros((n_regimes, states_posterior.shape[2]))  # n_regimes x time
+        for t in range(states_posterior.shape[2]):
+            for s in range(n_regimes):
+                # Calculate probability of being in regime s at time t
+                state_probs[s, t] = np.mean(states_posterior[chain, :, t] == s)
+        
+        # Step 2: Calculate pairwise products sum
+        pairwise_sum = 0
+        for i in range(n_regimes):
+            for j in range(i + 1, n_regimes):
+                # Multiply probabilities of different regimes
+                pairwise_sum += state_probs[i] * state_probs[j]
+        
+        # Step 3: Calculate RCM for this chain
+        # General formula: 100 * n * (n-1) * mean(sum of pairwise products)
+        rcm = 100 * n_regimes * (n_regimes - 1) * np.mean(pairwise_sum)
+        chain_rcms.append(rcm)
+    
+    return calculate_aggregate_metrics(chain_rcms)
