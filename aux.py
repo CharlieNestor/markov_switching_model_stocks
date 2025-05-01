@@ -427,3 +427,78 @@ def calculate_regime_classification(states_posterior, n_regimes: int = 3):
         chain_rcms.append(rcm)
     
     return calculate_aggregate_metrics(chain_rcms)
+
+
+
+### POSTERIOR PREDICTIVE CHECKS
+
+### PREDICTION ACCURACY
+
+
+def calculate_accuracy_metrics(returns: np.ndarray, posterior_pred: az.InferenceData) -> dict:
+    """
+    Calculate performance metrics accounting for posterior uncertainty
+    :param returns: observed returns
+    :param posterior_pred: posterior predictive samples from PyMC
+    :return: dictionary containing metrics with uncertainty
+    Note: Each metric is calculated for each draw in each chain,
+    resulting in n_chains * n_draws total values per metric
+    """
+    # Get predicted returns array (shape: chains x draws x time)
+    pred_returns = posterior_pred.posterior_predictive.returns_obs
+    
+    # Initialize metrics dictionary
+    metrics = {
+        'mse': [],
+        'rmse': [],
+        'mae': [],
+        'directional_accuracy': [],
+        'hit_rate': []
+    }
+    
+    # Iterate over chains and draws (total iterations = n_chains * n_draws)
+    for chain in range(pred_returns.chain.size):
+        for draw in range(pred_returns.draw.size):
+            # Get predictions for this chain and draw
+            preds = pred_returns.isel(chain=chain, draw=draw)
+            
+            # Calculate metrics for this draw
+            residuals = returns - preds
+            mse = np.mean(residuals**2)
+            rmse = np.sqrt(mse)
+            mae = np.mean(np.abs(residuals))
+            
+            # Directional accuracy (for consecutive returns)
+            pred_direction = np.diff(preds) > 0
+            actual_direction = np.diff(returns) > 0
+            dir_accuracy = np.mean(pred_direction == actual_direction)
+            
+            # Hit rate (for positive/negative returns)
+            pred_positive = preds > 0
+            actual_positive = returns > 0
+            hit_rate = np.mean(pred_positive == actual_positive)
+            
+            # Store metrics for this draw
+            metrics['mse'].append(mse)
+            metrics['rmse'].append(rmse)
+            metrics['mae'].append(mae)
+            metrics['directional_accuracy'].append(dir_accuracy)
+            metrics['hit_rate'].append(hit_rate)
+    
+    # Calculate summary statistics across all draws
+    summary = {}
+    for metric_name, values in metrics.items():
+        summary[metric_name] = {
+            'mean': round(np.mean(values), 6),
+            'std': round(np.std(values), 6),
+            'median': round(np.median(values), 6),
+            '2.5%': round(np.percentile(values, 2.5), 6),
+            '97.5%': round(np.percentile(values, 97.5), 6)
+        }
+
+        # Add additional statistics for directional metrics
+        if metric_name in ['directional_accuracy', 'hit_rate']:
+            better_than_random = np.mean(np.array(values) > 0.5)
+            summary[metric_name]['prob_better_than_random'] = round(better_than_random, 6)
+    
+    return summary
