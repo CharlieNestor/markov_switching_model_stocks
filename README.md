@@ -1,6 +1,6 @@
 # Markov Switching Model for Financial Time Series
 
-This project implements a Bayesian Markov Switching Model for analyzing financial time series data, with a particular focus on capturing the peculiar dynamics of stock returns. The model employs a full Bayesian approach to identify and characterize different market regimes, providing a robust framework for understanding market behavior.
+This project implements a Bayesian Markov Switching Model for analyzing financial time series data, with a particular focus on capturing the  dynamics of stock returns. The model employs a full Bayesian approach to identify and characterize different market regimes, providing a robust framework for understanding market behavior.
 
 ## Project Overview
 
@@ -11,7 +11,7 @@ Financial time series analysis presents several modeling challenges:
 3. **Non-Normal Features**: Returns often display fat tails and excess kurtosis
 4. **Mean Reversion**: Returns exhibit varying degrees of mean reversion across regimes
 
-The project addresses these challenges through a Markov Switching Model that:
+The project addresses these points through a Markov Switching Model that:
 
 - Uses latent state variables to identify market regimes
 - Implements regime-specific dynamics for returns and volatility
