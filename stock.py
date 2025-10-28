@@ -9,12 +9,19 @@ class Stock:
     Simple class to load, store and plot stock data
     """
 
-    def __init__(self, ticker: str):
+    def __init__(self, ticker: str, timeframe: str = 'daily'):
         """
         :param ticker: The stock ticker symbol
+        :param timeframe: The time frequency for the data ('daily' or 'weekly'). Default to 'daily'.
         """
+        timeframe = timeframe.lower()
+        if timeframe not in ['daily', 'weekly']:
+            raise ValueError("timeframe must be either 'daily' or 'weekly'")
+        
         self.ticker = ticker
+        self.timeframe = timeframe
         self.df = None              # Main DataFrame to store historical price data
+        self.df_weekly = None       # DataFrame to store weekly resampled data
         self.info = None            # Dictionary to store general stock information
         self.first_date = None      # First date of the data
         self.last_date = None       # Last date of the data
@@ -25,19 +32,28 @@ class Stock:
         Loads the stock data by calling function defined in loader.py
         Wraps the data in a pandas DataFrame and adds the percentage log returns.
         """
-        # load data
+        # Step 1: Load raw data in daily frequency
         data = l.load_data(self.ticker)
         if not data or self.ticker not in data:
             raise ValueError(f"Invalid ticker or no data found for {self.ticker}")
         cleaned_data = l.check_clean_data(data)
-        if not cleaned_data[self.ticker]['historical_data'].empty:
-            self.first_date = cleaned_data[self.ticker]['historical_data'].index[0]
-            self.last_date = cleaned_data[self.ticker]['historical_data'].index[-1]
-            self.df = cleaned_data[self.ticker]['historical_data']
-            self.info = cleaned_data[self.ticker]['info']
-            self.df = l.add_pct_log_returns(self.df)
-        else:
+        if cleaned_data[self.ticker]['historical_data'].empty:
             raise ValueError(f"No historical data available for {self.ticker}")
+        
+        temp_df = cleaned_data[self.ticker]['historical_data']
+        self.info = cleaned_data[self.ticker]['info']
+
+        # Step 2: Resample to weekly if needed
+        if self.timeframe == 'weekly':
+            temp_df = l.resample_to_weekly(temp_df)
+            self.df_weekly = temp_df.copy()
+        
+        # Step 3: Store the final DataFrame and compute returns
+        self.df = temp_df
+        self.df = l.add_pct_log_returns(self.df)
+        self.first_date = self.df.index[0]
+        self.last_date = self.df.index[-1]
+
         
 
     def plot_close(self, log_scale: bool = True, height: int = None, width: int = None) -> go.Figure:

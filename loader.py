@@ -28,7 +28,7 @@ def load_data(tickers: Union[str, list[str]], start_date = '1995-01-01') -> dict
             continue    # skip to the next ticker
         # get historical data
         try:
-            historical_data = stock.history(start=start_date)     # keepna=True will keep the rows with missing values
+            historical_data = stock.history(start=start_date, interval="1d")     # keepna=True will keep the rows with missing values
         except Exception as e:
             print(f"Could not get historical data for {ticker}.")
             print(f'Error: {e}')
@@ -275,8 +275,38 @@ def filter_data(data: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFr
     return data
 
 
+def resample_to_weekly(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Resample daily OHLCV data to weekly data, ending on Friday.
+    : param df: DataFrame with daily data and a datetime index.
+    : return: DataFrame with weekly data.
+    """
+    aggregation_rules = {
+        'Open': 'first',
+        'High': 'max',
+        'Low': 'min',
+        'Close': 'last',
+        'Volume': 'sum',
+        'Dividends': 'sum',
+        'Stock Splits': 'sum'
+    }
+    
+    # Select only columns that exist in the dataframe to avoid errors
+    existing_cols_rules = {k: v for k, v in aggregation_rules.items() if k in df.columns}
+    
+    weekly_df = df.resample('W-FRI').agg(existing_cols_rules)
+    
+    # Drop rows where all columns are NaN (for weeks with no trading)
+    weekly_df.dropna(how='all', inplace=True)
+    
+    return weekly_df
 
-# TECHNICAL INDICATORS functions
+
+
+#############################################################
+#   TECHNICAL INDICATORS FUNCTIONS
+#############################################################
+
 
 def calculate_ATR(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
     """
@@ -311,5 +341,25 @@ def calculate_ATR(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
 
     # Drop the intermediate 'Prev_Close' column
     df.drop(columns=['Prev_Close'], inplace=True)
+
+    return new_df
+
+
+def calculate_EMA(df: pd.DataFrame, period: int = 27) -> pd.DataFrame:
+    """
+    Calculate the Exponential Moving Average (EMA) for a given DataFrame.
+    : param df: DataFrame with at least a 'Close' column.
+    : param period: Period for calculating the EMA (default is 27).
+    : return: New DataFrame with EMA and Lagged_EMA columns.
+    """
+    # ensure the DataFrame contains the necessary columns
+    if 'Close' not in df.columns:
+        raise ValueError("DataFrame must contain a 'Close' column.")
+    
+    new_df = pd.DataFrame(index=df.index)
+
+    # calculate the Exponential Moving Average (EMA)
+    new_df[f'EMA_{period}'] = df['Close'].ewm(span=period, adjust=False).mean()
+    new_df[f'Lagged_EMA_{period}'] = new_df[f'EMA_{period}'].shift(1)
 
     return new_df
