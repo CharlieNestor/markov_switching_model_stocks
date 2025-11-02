@@ -6,3 +6,6 @@ __pycache__/
 
 # Storage
 .DS_Store
+
+# Folders
+Pics_article/

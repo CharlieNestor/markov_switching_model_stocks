@@ -1,74 +1,47 @@
 # Markov Switching Model for Financial Time Series
 
-This project implements a Bayesian Markov Switching Model for analyzing financial time series data, with a particular focus on capturing the  dynamics of stock returns. The model employs a full Bayesian approach to identify and characterize different market regimes, providing a robust framework for understanding market behavior.
+A Bayesian implementation of a Markov Switching Model for analyzing stock returns and identifying distinct market regimes. The model captures regime-switching behavior, volatility clustering, and non-normal return distributions commonly observed in financial markets.
 
-## Project Overview
+## Overview
 
-Financial time series analysis presents several modeling challenges:
+This project implements a Hidden Markov Model (HMM) to identify and characterize different market regimes in stock returns. The approach combines:
 
-1. **Regime-Switching Behavior**: Markets transition between distinct states (e.g., bull markets, bear markets)
-2. **Volatility Dynamics**: Returns generally show persistent volatility patterns and clustering
-3. **Non-Normal Features**: Returns often display fat tails and excess kurtosis
-4. **Mean Reversion**: Returns exhibit varying degrees of mean reversion across regimes
-
-The project addresses these points through a Markov Switching Model that:
-
-- Uses latent state variables to identify market regimes
-- Implements regime-specific dynamics for returns and volatility
-- Incorporates prior knowledge (or lack of) via Bayesian priors
-- Provides full posterior distributions for all model parameters (thanks to the Bayesian approach)
-
-## Analysis and Implementation
-
-### 1. Exploratory Data Analysis
-
-The EDA component provides a detailed statistical analysis for understanding financial time series behavior:
-
-- **Statistical Tests**: Tests including Jarque-Bera, Augmented Dickey-Fuller, and Ljung-Box
-- **Distribution Analysis**: Examination of return distributions and normality
-- **Volatility Analysis**: Investigation of volatility clustering, persistence, and leverage effects
-- **Time Series Properties**: Analysis of autocorrelation patterns in returns and squared returns
-
-### 2. Bayesian Markov Switching Model
-
-Building on the insights from the EDA, the Markov Switching Model is implemented via a Bayesian approach:
-
-- **Hidden Markov Chain**: Latent state variables following a Markov process
-- **Regime-Specific Parameters**:
-  - Mean returns with autoregressive components
-  - Volatility dynamics with GARCH-like features
-  - Transition probabilities between regimes
-- **Prior Specifications**:
-  - Beta priors for transition probabilities
-  - Normal priors for mean returns
-  - Half-Normal priors for volatility parameters
-  - Stationarity constraints for autoregressive components
-
-### 3. Volatility Modeling
-
-The model implements a volatility modeling approach that:
-
-- Combines base volatility levels with regime-specific dynamics
-- Incorporates ARCH-like components responding to recent returns
-- Includes a memory component with adaptive weighting
-- Ensures stationarity through parameter constraints
-
-### 4. Inference and Analysis
-
-The project provides tools for:
-
-- MCMC sampling with NUTS algorithm
-- Posterior predictive analysis
-- Regime probability estimation
-- Model diagnostics and convergence checks
-- Visualization of regime classifications and parameter distributions
+- Latent regime states following a Markov process
+- Regime-specific return and volatility dynamics
+- Full Bayesian inference using PyMC
 
 ## Project Structure
 
-- `EDA_analysis.ipynb`: Comprehensive statistical analysis of financial time series
-- `MSModel_2Regimes.ipynb`: Core implementation of the Markov Switching Model
-- `stock.py`: Stock data handling and preprocessing
-- `aux.py`: Utility functions for analysis and visualization
+### 1. Exploratory Data Analysis ([`EDA_analysis.ipynb`](EDA_analysis.ipynb))
+
+Comprehensive statistical analysis providing context for model design:
+- Distribution analysis and statistical tests
+- Volatility clustering and persistence patterns
+- Autocorrelation structure in returns
+
+For detailed discussion of the EDA methodology and findings, check out this article [our article](link-to-article).
+
+### 2. Markov Switching Model ([`MSModel_2Regimes.ipynb`](MSModel_2Regimes.ipynb))
+
+Core implementation featuring:
+- **Two-regime model** with hidden Markov chain
+- **Regime-specific parameters**: mean returns, volatility dynamics, and autoregressive components
+- **Volatility modeling**: Base level + ARCH component + regime-specific memory
+- **Bayesian inference**: Full posterior distributions via MCMC (NUTS sampler)
+
+### 3. Supporting Modules
+
+- [`stock.py`](stock.py): Data handling and preprocessing
+- [`aux.py`](aux.py): Analysis utilities and diagnostic functions
+
+## Key Features
+
+- Identifies bull and bear market regimes
+- Models regime persistence via transition probabilities
+- Captures volatility clustering within regimes
+- Provides uncertainty quantification for all parameters
+- Includes diagnostic tools for convergence assessment
+
 
 ## Installation
 
@@ -76,10 +49,15 @@ The project provides tools for:
 ```bash
 git clone https://github.com/yourusername/markov_switching.git
 cd markov_switching
-```
-
-2. Install the required dependencies:
-```bash
 pip install -r requirements.txt
 ```
+
+## Requirements
+
+See [`requirements.txt`](requirements.txt) for full dependencies. Key packages:
+- PyMC (Bayesian modeling)
+- ArviZ (diagnostics)
+- pandas, numpy (data handling)
+- matplotlib, seaborn (visualization)
+- yfinance up to date (data retrieval)
 
