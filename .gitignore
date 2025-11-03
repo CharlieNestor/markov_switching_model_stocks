@@ -1,5 +1,6 @@
 # Virtual environment
 markov_switch/
+.python-version
 
 # Python
 __pycache__/

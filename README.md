@@ -19,7 +19,7 @@ Comprehensive statistical analysis providing context for model design:
 - Volatility clustering and persistence patterns
 - Autocorrelation structure in returns
 
-For detailed discussion of the EDA methodology and findings, check out this article [our article](link-to-article).
+For detailed discussion of the EDA methodology and findings, check out this article [Understanding Financial Time Series](https://medium.com/@carlo.baroni.89/understanding-financial-time-series-a-statistical-deep-dive-cd4ea99d299c).
 
 ### 2. Markov Switching Model ([`MSModel_2Regimes.ipynb`](MSModel_2Regimes.ipynb))
 
