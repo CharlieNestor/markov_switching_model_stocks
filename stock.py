@@ -20,40 +20,62 @@ class Stock:
         
         self.ticker = ticker
         self.timeframe = timeframe
-        self.df = None              # Main DataFrame to store historical price data
+        self.df_daily = None        # Main DataFrame to store historical price data
         self.df_weekly = None       # DataFrame to store weekly resampled data
         self.info = None            # Dictionary to store general stock information
         self.first_date = None      # First date of the data
         self.last_date = None       # Last date of the data
 
 
-    def load_data(self):
+    def load_data(self, start_date: str = '1985-01-01') -> None:
         """
         Loads the stock data by calling function defined in loader.py
         Wraps the data in a pandas DataFrame and adds the percentage log returns.
+        :param start_date: The start date for loading data in 'YYYY-MM-DD' format. Default is '1985-01-01'.
+        :return: None
         """
         # Step 1: Load raw data in daily frequency
-        data = l.load_data(self.ticker)
+        data = l.load_data(self.ticker, start_date = start_date)
         if not data or self.ticker not in data:
             raise ValueError(f"Invalid ticker or no data found for {self.ticker}")
         cleaned_data = l.check_clean_data(data)
         if cleaned_data[self.ticker]['historical_data'].empty:
             raise ValueError(f"No historical data available for {self.ticker}")
         
-        temp_df = cleaned_data[self.ticker]['historical_data']
+        daily_df = cleaned_data[self.ticker]['historical_data']
         self.info = cleaned_data[self.ticker]['info']
 
-        # Step 2: Resample to weekly if needed
-        if self.timeframe == 'weekly':
-            temp_df = l.resample_to_weekly(temp_df)
-            self.df_weekly = temp_df.copy()
-        
-        # Step 3: Store the final DataFrame and compute returns
-        self.df = temp_df
-        self.df = l.add_pct_log_returns(self.df)
-        self.first_date = self.df.index[0]
-        self.last_date = self.df.index[-1]
+        # Step 2: Always store daily data with returns
+        self.df_daily = l.add_pct_log_returns(daily_df.copy())
 
+        # Step 3: If weekly timeframe requested, resample and store separately
+        if self.timeframe == 'weekly':
+            weekly_df = l.resample_to_weekly(daily_df.copy())
+            self.df_weekly = l.add_pct_log_returns(weekly_df)
+            self.first_date = self.df_weekly.index[0]
+            self.last_date = self.df_weekly.index[-1]
+            print(f"\n{self.timeframe.capitalize()} data loaded from {self.first_date.date()} to {self.last_date.date()}")
+            print(f"Total weeks loaded: {len(self.df_weekly)}")
+        else:
+            self.first_date = self.df_daily.index[0]
+            self.last_date = self.df_daily.index[-1]
+            print(f"\n{self.timeframe.capitalize()} data loaded from {self.first_date.date()} to {self.last_date.date()}")
+            print(f"Total days loaded: {len(self.df_daily)}")
+
+    
+    def get_data(self) -> pd.DataFrame:
+        """
+        Returns the appropriate dataframe based on the chosen timeframe.
+        :return: DataFrame with daily or weekly data
+        """
+        if self.timeframe == 'weekly':
+            if self.df_weekly is None:
+                raise ValueError("Weekly data not loaded. Please call load_data() first.")
+            return self.df_weekly
+        else:
+            if self.df_daily is None:
+                raise ValueError("Daily data not loaded. Please call load_data() first.")
+            return self.df_daily
         
 
     def plot_close(self, log_scale: bool = True, height: int = None, width: int = None) -> go.Figure:
@@ -65,22 +87,21 @@ class Stock:
         :return: Plotly figure object
         """
 
-        if self.df is None:
-            raise ValueError("No data available. Please call load_data() first.")
+        df = self.get_data()
             
         fig = go.Figure()
         
         fig.add_trace(
             go.Scatter(
-                x=self.df.index,
-                y=self.df['Close'],
+                x=df.index,
+                y=df['Close'],
                 mode='lines',
             )
         )
 
         # Update the layout with customizable options
         layout_args = {
-            'title': f"{self.ticker} Closing Prices Over Time",
+            'title': f"{self.ticker} {self.timeframe.capitalize()} Closing Prices Over Time",
             'title_x': 0.5,     # Center the title
             'yaxis_type': "log" if log_scale else "linear",
             'yaxis_title': "Price (log scale)" if log_scale else "Price",
