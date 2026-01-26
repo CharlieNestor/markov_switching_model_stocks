@@ -1,47 +1,44 @@
-# Markov Switching Model for Financial Time Series
+# Regime Switching Models for Financial Time Series
 
-A Bayesian implementation of a Markov Switching Model for analyzing stock returns and identifying distinct market regimes. The model captures regime-switching behavior, volatility clustering, and non-normal return distributions commonly observed in financial markets.
+This project implements **Regime Switching Models** to analyze stock returns and identify distinct market environments (e.g., Bull vs. Bear markets). It combines statistical rigor with practical financial application, offering two distinct methodological approaches to regime detection:
 
-## Overview
-
-This project implements a Hidden Markov Model (HMM) to identify and characterize different market regimes in stock returns. The approach combines:
-
-- Latent regime states following a Markov process
-- Regime-specific return and volatility dynamics
-- Full Bayesian inference using PyMC
+*   **Bayesian Inference**: Captures parameter uncertainty using MCMC (PyMC).
+*   **Frequentist Estimation**: Utilizes Maximum Likelihood and the EM algorithm (hmmlearn).
 
 ## Project Structure
 
 ### 1. Exploratory Data Analysis ([`EDA_analysis.ipynb`](EDA_analysis.ipynb))
 
-Comprehensive statistical analysis providing context for model design:
+Comprehensive statistical groundwork providing context for model design:
 - Distribution analysis and statistical tests
-- Volatility clustering and persistence patterns
-- Autocorrelation structure in returns
+- Volatility clustering and autocorrelation patterns
 
-For detailed discussion of the EDA methodology and findings, check out this article [Understanding Financial Time Series](https://medium.com/@carlo.baroni.89/understanding-financial-time-series-a-statistical-deep-dive-cd4ea99d299c).
+For detailed discussion, check out this article [Understanding Financial Time Series](https://medium.com/@carlo.baroni.89/understanding-financial-time-series-a-statistical-deep-dive-cd4ea99d299c).
 
-### 2. Markov Switching Model ([`MSModel_2Regimes.ipynb`](MSModel_2Regimes.ipynb))
+### 2. Bayesian MS Model ([`MSModel_2Regimes.ipynb`](MSModel_2Regimes.ipynb))
+A robust Bayesian implementation focusing on uncertainty quantification:
+- **Core**: Two-regime Markov Switching Model with regime-specific mean and volatility.
+- **Inference**: Full posterior distributions via NUTS sampler (PyMC).
+- **Features**: Captures volatility persistence and provides probability intervals for all parameters.
 
-Core implementation featuring:
-- **Two-regime model** with hidden Markov chain
-- **Regime-specific parameters**: mean returns, volatility dynamics, and autoregressive components
-- **Volatility modeling**: Base level + ARCH component + regime-specific memory
-- **Bayesian inference**: Full posterior distributions via MCMC (NUTS sampler)
+### 3. Frequentist HMM ([`hmm_model.ipynb`](hmm_model.ipynb))
+A flexible Hidden Markov Model approach focusing on likelihood maximization and forecasting:
+- **Core**: Gaussian Mixture HMM (GMM-HMM) with dynamically learned transition matrices.
+- **Method**: Expectation-Maximization (EM) algorithm for parameter estimation.
+- **Features**: 
+    - Regime decoding (Viterbi/Smoothing)
+    - One-step-ahead density forecasting
+    - Empirical vs. Theoretical mixture distribution analysis
 
-### 3. Supporting Modules
-
-- [`stock.py`](stock.py): Data handling and preprocessing
-- [`aux.py`](aux.py): Analysis utilities and diagnostic functions
+### 4. Supporting Modules
+- [`stock.py`](stock.py): Data handling and preprocessing wrapper.
+- [`aux.py`](aux.py): Analysis utilities and diagnostic functions.
 
 ## Key Features
-
-- Identifies bull and bear market regimes
-- Models regime persistence via transition probabilities
-- Captures volatility clustering within regimes
-- Provides uncertainty quantification for all parameters
-- Includes diagnostic tools for convergence assessment
-
+- **Dual Perspective**: Compare results from Bayesian (probabilistic) and Frequentist (likelihood-based) models.
+- **Regime Identification**: Automatically segments time series into volatility regimes.
+- **Forecasting**: Generates predictive distributions conditioning on the current market state.
+- **Diagnostics**: Includes convergence checks and goodness-of-fit visualisations.
 
 ## Installation
 
@@ -56,8 +53,8 @@ pip install -r requirements.txt
 
 See [`requirements.txt`](requirements.txt) for full dependencies. Key packages:
 - PyMC (Bayesian modeling)
+- hmmlearn (Frequentist HMM)
 - ArviZ (diagnostics)
 - pandas, numpy (data handling)
 - matplotlib, seaborn (visualization)
-- yfinance up to date (data retrieval)
-
+- yfinance (data retrieval)
