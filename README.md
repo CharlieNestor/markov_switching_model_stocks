@@ -30,7 +30,13 @@ A flexible Hidden Markov Model approach focusing on likelihood maximization and 
     - One-step-ahead density forecasting
     - Empirical vs. Theoretical mixture distribution analysis
 
-### 4. Supporting Modules
+### 4. Walk-Forward Analysis ([`hmm_walk_forward.ipynb`](hmm_walk_forward.ipynb))
+A comprehensive backtesting engine that simulates real-world performance by iteratively re-estimating the model and predicting future market states:
+- **Label Switching & Consistency**: Employs a utility-based sorting algorithm to resolve state permutations and ensure regimes remain economically consistent over time.
+- **Forecast Validation**: Systematically evaluates the accuracy of "next-day" predictions against ex-post smoothed beliefs.
+- **Investment Strategies**: Implements and evaluates out-of-sample portfolio allocations, comparing naive regime-switching approaches with more advanced strategies.
+
+### 5. Supporting Modules
 - [`stock.py`](stock.py): Data handling and preprocessing wrapper.
 - [`aux.py`](aux.py): Analysis utilities and diagnostic functions.
 
